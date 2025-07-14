@@ -1,5 +1,5 @@
 transaction-db:
-  date: np.datetime64
-  amount: float
-  description: str
-  category: str
+  date: object
+  amount: np.float32
+  description: object
+  category: object
