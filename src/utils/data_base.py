@@ -36,6 +36,9 @@ class DataBase:
         """
         return {column: eval(datetype) for column, datetype in self.data_model.items()}
 
+    #def write_schema(self):
+        #return
+
     def create_df(self) -> pd.DataFrame:
         """
         Create database data frame
@@ -65,6 +68,14 @@ class DataBase:
         file_path = os.path.join(self.data_path, f'{dt_now}_db.parquet')
         self.df.to_parquet(path=file_path, engine='fastparquet', compression='gzip')
 
+    def insert_transaction(self, request:dict):
+        self.df = self.df._append(request, ignore_index=True)
+
+    def update_transaction(self, request:dict):
+        self.df = self.df._append(request, ignore_index=True)
+
+    def delete_transaction(self, request: dict):
+        self.df = self.df._append(request, ignore_index=True)
 
 if __name__ == '__main__':
 
@@ -82,4 +93,12 @@ if __name__ == '__main__':
 
     #db.write_df()
 
+    #db.df = db.df._append({'date': '2025-01-04', 'amount': 14.68, 'description': 'sushi', 'category': 'restaurant'}, ignore_index=True)
+
+    #db.insert_transaction({'date': '2025-01-04', 'amount': 14.68, 'description': 'sushi', 'category': 'restaurant'})
+
+    db.insert_transaction({'date': '2025-01-06', 'amount': 7.68, 'category': 'restaurant'})
+
     print(db.df.info())
+
+    print(db.df)
