@@ -194,5 +194,6 @@ cython_debug/
 .cursorindexingignore
 .idea
 token.txt
-.parquet
-.parquet.gzip
+*.parquet
+*.parquet.gzip
+*.yml
