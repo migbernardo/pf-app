@@ -14,12 +14,11 @@ class DataBase:
         df: supporting data frame
         mode: create database: "w" or read existing database "r"
     """
-    def __init__(self, data_model:dict, mode:str, data_path:os.path):
+    def __init__(self, mode:str, data_path:os.path):
         self.mode = mode
         self.data_path = data_path
 
         if mode == 'w':
-            self.data_model = data_model
             self.schema = self.read_schema()
             self.df = self.create_df()
 
@@ -30,12 +29,17 @@ class DataBase:
         elif mode != 'r':
             raise ValueError('Select a valid value for mode: "w" or "r"')
 
-    def read_schema(self) -> dict:
+    def read_schema(self, db_name:str='transaction-db') -> dict:
         """
-        Data model parser
+        Read database data model
+        :param db_name: database name - "transaction-db" default
         :return: Schema dictionary with the evaluated data types
         """
-        return {column: eval(datetype) for column, datetype in self.data_model.items()}
+        # get latest yml file from data path
+        files = glob(os.path.join(self.data_path, '*.yml'))
+        file_path = max(files, key=os.path.getmtime)
+        data_model = read_yaml(file_path=file_path)
+        return {column: eval(datetype) for column, datetype in data_model[db_name].items()}
 
     def write_schema(self, db_name:str='transaction-db'):
         """
@@ -101,7 +105,7 @@ class DataBase:
 
     def delete_transactions(self, row_indexes: list) -> object:
         """
-        Delete an existing row of the transaction database
+        Delete existing rows of the transaction database
         :param row_indexes: list of row indexes to delete from the database
         :return: Data frame with deleted rows
         """
@@ -127,15 +131,9 @@ if __name__ == '__main__':
 
     # run as module: python -m src.utils.read_files
 
-    dm_file = os.path.join('src', 'utils', 'data_model.yml')
-
-    loaded_file = read_yaml(file_path=dm_file)
-
-    loaded_data_model = loaded_file['transaction-db']
-
     data_dir = os.path.join('src', 'data')
 
-    db = DataBase(data_model=loaded_data_model, mode='r', data_path=data_dir)
+    db = DataBase(mode='r', data_path=data_dir)
 
     #db.write_df()
 
@@ -152,5 +150,3 @@ if __name__ == '__main__':
     print(db.df.info())
 
     print(db.df)
-
-    #print(list(db.df['date'].loc[lambda x: x == '2025-01-06'].index))
