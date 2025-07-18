@@ -3,7 +3,9 @@ import pandas as pd
 import numpy as np
 from datetime import datetime
 from glob import glob
-from src.utils.file_io import read_yaml, write_yaml, np_dtype_converter
+from src.utils.file_io import read_yaml, write_yaml, np_yaml_dtype_converter, np_python_dtype_converter
+from pydantic import BaseModel, create_model
+#from typing import Any, Optional
 
 class DataBase:
     """
@@ -12,22 +14,26 @@ class DataBase:
     Attributes:
         schema: evaluated database schema
         df: supporting data frame
-        mode: create database: "w" or read existing database "r"
+        mode: create database: "create" or read existing database "read"
+        write_schema: write database schema - default false
     """
-    def __init__(self, mode:str, data_path:os.path):
+    def __init__(self, mode:str, data_path:os.path, write_schema:bool=False):
         self.mode = mode
         self.data_path = data_path
 
-        if mode == 'w':
+        if mode == 'create':
             self.schema = self.read_schema()
             self.df = self.create_df()
 
-        elif mode == 'r':
+        elif mode == 'read':
+            self.schema = self.read_schema()
             self.df = self.read_df()
-            self.write_schema()
 
-        elif mode != 'r':
+        elif mode != 'read':
             raise ValueError('Select a valid value for mode: "w" or "r"')
+
+        if write_schema:
+            self.write_schema()
 
     def read_schema(self, db_name:str='transaction-db') -> dict:
         """
@@ -48,7 +54,7 @@ class DataBase:
         :return: Data model saved in yaml file
         """
         dtypes = self.df.dtypes.to_dict()
-        data_model = np_dtype_converter(data_types=dtypes)
+        data_model = np_yaml_dtype_converter(data_types=dtypes)
         data_model = {db_name: {col: dt for col, dt in data_model.items()}}
         dt_now = datetime.now().strftime("%Y%m%d_%H%M%S")
         file_path = os.path.join(self.data_path, f'{dt_now}_data_model.yml')
@@ -126,14 +132,13 @@ class DataBase:
         indexes = list(self.df[column].loc[lambda x: x == value].index)
         return indexes
 
-
 if __name__ == '__main__':
 
     # run as module: python -m src.utils.read_files
 
     data_dir = os.path.join('src', 'data')
 
-    db = DataBase(mode='r', data_path=data_dir)
+    db = DataBase(mode='read', data_path=data_dir)
 
     #db.write_df()
 
@@ -147,6 +152,22 @@ if __name__ == '__main__':
 
     #db.delete_transactions(row_indexes=[0])
 
-    print(db.df.info())
+    model_schema = {col: (type, None) for col, type in np_python_dtype_converter(data_types=db.schema).items()}
 
-    print(db.df)
+    print(model_schema)
+
+    model =  create_model('Transaction', **model_schema)
+
+    print(model)
+
+    #model.model_construct(db.schema)
+
+    #print(db.schema)
+
+    #print(db.df.info())
+
+    #print(db.df)
+
+    print(model.model_validate({'date': '2025', 'amount': 4.56, 'description': 'tooth paste', 'category': 'other'}))
+
+    print(model.model_fields)
