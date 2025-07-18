@@ -3,9 +3,7 @@ import pandas as pd
 import numpy as np
 from datetime import datetime
 from glob import glob
-from src.utils.file_io import read_yaml, write_yaml, np_yaml_dtype_converter, np_python_dtype_converter
-from pydantic import BaseModel, create_model
-#from typing import Any, Optional
+from src.utils.file_io import read_yaml, write_yaml, np_yaml_dtype_converter
 
 class DataBase:
     """
@@ -15,25 +13,20 @@ class DataBase:
         schema: evaluated database schema
         df: supporting data frame
         mode: create database: "create" or read existing database "read"
-        write_schema: write database schema - default false
     """
-    def __init__(self, mode:str, data_path:os.path, write_schema:bool=False):
+    def __init__(self, mode:str, data_path:os.path):
         self.mode = mode
         self.data_path = data_path
+        self.schema = self.read_schema()
 
         if mode == 'create':
-            self.schema = self.read_schema()
             self.df = self.create_df()
 
         elif mode == 'read':
-            self.schema = self.read_schema()
             self.df = self.read_df()
 
         elif mode != 'read':
-            raise ValueError('Select a valid value for mode: "w" or "r"')
-
-        if write_schema:
-            self.write_schema()
+            raise ValueError('Select a valid value for mode: "create" or "read"')
 
     def read_schema(self, db_name:str='transaction-db') -> dict:
         """
@@ -87,6 +80,7 @@ class DataBase:
         """
         dt_now = datetime.now().strftime("%Y%m%d_%H%M%S")
         file_path = os.path.join(self.data_path, f'{dt_now}_db.parquet')
+        self.df.reset_index(drop=True, inplace=True)
         self.df.to_parquet(path=file_path, engine='fastparquet', compression='gzip')
 
     def insert_transaction(self, request:dict) -> object:
@@ -122,7 +116,7 @@ class DataBase:
 
         self.df.drop(index=filtered_row_indexes, inplace=True)
 
-    def search_records(self, column: str, value) -> list:
+    def search_records(self, column:str, value) -> list:
         """
          Search rows based on specific column values
          :param column: column to search
@@ -151,23 +145,3 @@ if __name__ == '__main__':
     db.update_transaction({0: {'date': '2025-01-06', 'amount': 7.68, 'category': 'restaurant'}})
 
     #db.delete_transactions(row_indexes=[0])
-
-    model_schema = {col: (type, None) for col, type in np_python_dtype_converter(data_types=db.schema).items()}
-
-    print(model_schema)
-
-    model =  create_model('Transaction', **model_schema)
-
-    print(model)
-
-    #model.model_construct(db.schema)
-
-    #print(db.schema)
-
-    #print(db.df.info())
-
-    #print(db.df)
-
-    print(model.model_validate({'date': '2025', 'amount': 4.56, 'description': 'tooth paste', 'category': 'other'}))
-
-    print(model.model_fields)
